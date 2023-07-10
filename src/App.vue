@@ -76,7 +76,6 @@ function movementY() {
 function countMove(frontWithoutEmptyArray, originNum, defaultMove, direction = 1) {
   let move = 0;
   move += direction * (defaultMove - frontWithoutEmptyArray.length);
-  console.log(move);
   frontWithoutEmptyArray.forEach((num, index, arr) => {
     const isOdd = (index + 1) % 2 !== 0;
     const isEven = (index + 1) % 2 === 0;
@@ -98,34 +97,26 @@ function countMove(frontWithoutEmptyArray, originNum, defaultMove, direction = 1
 }
 
 function right() {
-  for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
-    for (let colIndex = colCount - 1; colIndex >= 0; colIndex--) {
-      const originNum = gameBoard.value[rowIndex][colIndex];
-
-      if (!originNum) continue;
-
-      const frontWithoutEmpty = gameBoard.value[rowIndex].filter((num, index) => !!num && index > colIndex);
+  gameBoard.value.forEach((row, rowIndex) => {
+    row.forEach((col, colIndex, cols) => {
+      if (!col) return;
+      const frontWithoutEmpty = cols.filter((num, index) => !!num && index > colIndex);
       frontWithoutEmpty.reverse();
-
-      moveX.value[rowIndex][colIndex] = countMove(frontWithoutEmpty, originNum, colCount - 1 - colIndex, 1);
-    }
-  }
+      moveX.value[rowIndex][colIndex] = countMove(frontWithoutEmpty, col, colCount - 1 - colIndex, 1);
+    });
+  });
 
   movementX();
 }
 
 function left() {
-  for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
-    for (let colIndex = 0; colIndex < colCount; colIndex++) {
-      const originNum = gameBoard.value[rowIndex][colIndex];
-
-      if (!originNum) continue;
-
-      const frontWithoutEmpty = gameBoard.value[rowIndex].filter((num, index) => !!num && index < colIndex);
-
-      moveX.value[rowIndex][colIndex] = countMove(frontWithoutEmpty, originNum, colIndex, -1);
-    }
-  }
+  gameBoard.value.forEach((row, rowIndex) => {
+    row.forEach((col, colIndex, cols) => {
+      if (!col) return;
+      const frontWithoutEmpty = cols.filter((num, index) => !!num && index < colIndex);
+      moveX.value[rowIndex][colIndex] = countMove(frontWithoutEmpty, col, colIndex, -1);
+    });
+  });
 
   movementX();
 }
