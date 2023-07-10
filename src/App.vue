@@ -4,17 +4,19 @@ import { ref, onMounted } from "vue";
 const rowCount = 4;
 const colCount = 4;
 
-function rowColValue() {
-  return Array(rowCount)
-    .fill(null)
-    .map((i) => Array(colCount).fill(0));
-}
+const score = ref(0);
 
 const gameBoard = ref(rowColValue());
 const moveX = ref(rowColValue());
 const moveY = ref(rowColValue());
 const merge = ref(rowColValue());
 const newResult = ref(rowColValue());
+
+function rowColValue() {
+  return Array(rowCount)
+    .fill(null)
+    .map((i) => Array(colCount).fill(0));
+}
 
 function setGameBoardToNewResult() {
   gameBoard.value = newResult.value;
@@ -34,6 +36,7 @@ function movementX() {
       }
       if (newResult.value[r_index][c_index + move] === originNum && originNum !== 0) {
         merge.value[r_index][c_index + move] = 1;
+        score.value += originNum * 2;
       }
       newResult.value[r_index][c_index + move] += originNum;
     });
@@ -59,6 +62,7 @@ function movementY() {
       }
       if (newResult.value[r_index + move][c_index] === originNum && originNum !== 0) {
         merge.value[r_index + move][c_index] = 1;
+        score.value += originNum * 2;
       }
       newResult.value[r_index + move][c_index] += originNum;
     });
@@ -158,18 +162,6 @@ function bottom() {
   movementY();
 }
 
-function keydownHandler(e) {
-  if (e.code === "ArrowLeft") {
-    left();
-  } else if (e.code === "ArrowRight") {
-    right();
-  } else if (e.code === "ArrowUp") {
-    top();
-  } else if (e.code === "ArrowDown") {
-    bottom();
-  }
-}
-
 let completeElementCount = 0;
 
 function enterTransition(el, done) {
@@ -242,6 +234,18 @@ function randomTwoFillIn(times) {
   }
 }
 
+function keydownHandler(e) {
+  if (e.code === "ArrowLeft") {
+    left();
+  } else if (e.code === "ArrowRight") {
+    right();
+  } else if (e.code === "ArrowUp") {
+    top();
+  } else if (e.code === "ArrowDown") {
+    bottom();
+  }
+}
+
 function gameStart() {
   randomTwoFillIn(2);
 }
@@ -253,6 +257,7 @@ onMounted(() => {
 </script>
 
 <template>
+  score: {{ score }}
   <div class="board">
     <div v-for="(row, row_index) in gameBoard" :key="row_index" class="row">
       <TransitionGroup @enter="enterTransition" @leave="leaveTransition">
@@ -269,7 +274,7 @@ onMounted(() => {
                 'box-32': col === 32,
                 'box-64': col === 64,
                 'box-128': col === 128,
-                'box-256': col === 256,
+                'box-256': col >= 256,
               }"
             >
               {{ col }}
