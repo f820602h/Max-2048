@@ -175,35 +175,53 @@ let completeElementCount = 0;
 function enterTransition(el, done) {
   const row = el.dataset.row;
   const col = el.dataset.col;
-  if (!merge.value[row][col]) return done();
+  const box = el.querySelector(".box");
 
-  const animation = el
-    .querySelector(".box")
-    .animate([{ transform: "scale(1.1)" }, { transform: "scale(0.9)" }, { transform: "scale(1)" }], { duration: 120 });
+  let animation;
+
+  if (merge.value[row][col] && box) {
+    animation = box.animate([{ transform: "scale(1.1)" }, { transform: "scale(0.9)" }, { transform: "scale(1)" }], {
+      duration: 150,
+    });
+  } else {
+    animation = el.animate([], { duration: 150 });
+  }
+
   animation.onfinish = () => {
     done();
     merge.value[row][col] = 0;
+    completeElementCount += 1;
+    if (completeElementCount === rowCount * colCount) {
+      completeElementCount = 0;
+      randomTwoFillIn(1);
+    }
   };
 }
 
 function leaveTransition(el, done) {
   const row = el.dataset.row;
   const col = el.dataset.col;
+  const box = el.querySelector(".box");
 
   const offsetX = moveX.value[row][col] * 112 + "px";
   const offsetY = moveY.value[row][col] * 112 + "px";
+  let animation;
 
-  const animation = el.querySelector(".box").animate([{}, { transform: `translate(${offsetX},${offsetY})` }], {
-    duration: 120,
-    easing: "ease-in",
-  });
+  if (box) {
+    animation = box.animate([{}, { transform: `translate(${offsetX},${offsetY})` }], {
+      duration: 150,
+      easing: "ease-in",
+    });
+  } else {
+    animation = el.animate([], { duration: 150, easing: "ease-in" });
+  }
+
   animation.onfinish = () => {
     done();
     completeElementCount += 1;
     if (completeElementCount === rowCount * colCount) {
       completeElementCount = 0;
       setGameBoardToNewResult();
-      randomTwoFillIn(1);
     }
   };
 }
@@ -239,21 +257,24 @@ onMounted(() => {
     <div v-for="(row, row_index) in gameBoard" :key="row_index" class="row">
       <TransitionGroup @enter="enterTransition" @leave="leaveTransition">
         <div v-for="(col, col_index) in row" :key="col_index" class="col" :data-row="row_index" :data-col="col_index">
-          <div
-            class="box"
-            :class="{
-              'box-2': col === 2,
-              'box-4': col === 4,
-              'box-8': col === 8,
-              'box-16': col === 16,
-              'box-32': col === 32,
-              'box-64': col === 64,
-              'box-128': col === 128,
-              'box-256': col === 256,
-            }"
-          >
-            {{ col ? col : "" }}
-          </div>
+          <Transition name="pop">
+            <div
+              v-if="col"
+              class="box"
+              :class="{
+                'box-2': col === 2,
+                'box-4': col === 4,
+                'box-8': col === 8,
+                'box-16': col === 16,
+                'box-32': col === 32,
+                'box-64': col === 64,
+                'box-128': col === 128,
+                'box-256': col === 256,
+              }"
+            >
+              {{ col }}
+            </div>
+          </Transition>
         </div>
       </TransitionGroup>
     </div>
@@ -329,5 +350,14 @@ $gutter: 12px;
       background-color: #edcc61;
     }
   }
+}
+
+.pop-enter-active,
+.pop-leave-active {
+  transition: all 0.15s ease;
+}
+.pop-enter-from,
+.pop-leave-to {
+  transform: scale(0);
 }
 </style>
