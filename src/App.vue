@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, onMounted } from "vue";
 
 const rowCount = 4;
 const colCount = 4;
@@ -20,40 +20,22 @@ function setGameBoardToNewResult() {
   gameBoard.value = newResult.value;
   moveX.value = rowColValue();
   moveY.value = rowColValue();
-  merge.value = rowColValue();
+  newResult.value = rowColValue();
 }
 
-function gameStart() {
-  randomTwoFillIn(2);
-}
-
-function movement(direction = "x") {
+function movementX() {
   let isMoved = false;
 
   moveX.value.forEach((row, r_index) => {
     row.forEach((move, c_index) => {
+      const originNum = gameBoard.value[r_index][c_index];
       if (move !== 0) {
         isMoved = true;
-
-        if (newResult.value[r_index][c_index + move] === gameBoard.value[r_index][c_index]) {
-          merge.value[r_index][c_index + move] = 1;
-        }
-        newResult.value[r_index][c_index + move] += gameBoard.value[r_index][c_index];
       }
-    });
-  });
-
-  moveY.value.forEach((row, r_index) => {
-    row.forEach((move, c_index) => {
-      if (move !== 0) {
-        isMoved = true;
-
-        if (newResult.value[r_index + move][c_index] === gameBoard.value[r_index][c_index]) {
-          merge.value[r_index + move][c_index] = 1;
-        }
-
-        newResult.value[r_index + move][c_index] += gameBoard.value[r_index][c_index];
+      if (newResult.value[r_index][c_index + move] === originNum && originNum !== 0) {
+        merge.value[r_index][c_index + move] = 1;
       }
+      newResult.value[r_index][c_index + move] += originNum;
     });
   });
 
@@ -66,6 +48,55 @@ function movement(direction = "x") {
   }
 }
 
+function movementY() {
+  let isMoved = false;
+
+  moveY.value.forEach((row, r_index) => {
+    row.forEach((move, c_index) => {
+      const originNum = gameBoard.value[r_index][c_index];
+      if (move !== 0) {
+        isMoved = true;
+      }
+      if (newResult.value[r_index + move][c_index] === originNum && originNum !== 0) {
+        merge.value[r_index + move][c_index] = 1;
+      }
+      newResult.value[r_index + move][c_index] += originNum;
+    });
+  });
+
+  if (isMoved) {
+    gameBoard.value = Array(rowCount)
+      .fill(null)
+      .map((i) => Array(0));
+  } else {
+    setGameBoardToNewResult();
+  }
+}
+
+function countMove(frontWithoutEmptyArray, originNum, defaultMove, direction = 1) {
+  let move = 0;
+  move += direction * (defaultMove - frontWithoutEmptyArray.length);
+  console.log(move);
+  frontWithoutEmptyArray.forEach((num, index, arr) => {
+    const isOdd = (index + 1) % 2 !== 0;
+    const isEven = (index + 1) % 2 === 0;
+    const isLastOne = index === arr.length - 1;
+
+    const sameWithAfter = num === arr[index + 1];
+    const sameWithBefore = num === arr[index - 1];
+    const sameWithOrigin = num === originNum;
+
+    if (isOdd && !isLastOne) {
+      if (sameWithAfter) move += direction;
+    } else if (isEven && !isLastOne) {
+      if (!sameWithBefore && sameWithAfter) move += direction;
+    } else if (isLastOne) {
+      if (!sameWithBefore && sameWithOrigin) move += direction;
+    }
+  });
+  return move;
+}
+
 function right() {
   for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
     for (let colIndex = colCount - 1; colIndex >= 0; colIndex--) {
@@ -73,25 +104,14 @@ function right() {
 
       if (!originNum) continue;
 
-      let move = 0;
       const frontWithoutEmpty = gameBoard.value[rowIndex].filter((num, index) => !!num && index > colIndex);
       frontWithoutEmpty.reverse();
 
-      move += colCount - 1 - colIndex - frontWithoutEmpty.length;
-      frontWithoutEmpty.forEach((num, index, arr) => {
-        if ((index + 1) % 2) {
-          if (num === arr[index + 1]) move += 1;
-          else if (index === arr.length - 1 && num === originNum) move += 1;
-        } else {
-          if (index === arr.length - 1 && num === originNum && num !== arr[index - 1]) move += 1;
-        }
-      });
-
-      moveX.value[rowIndex][colIndex] = move;
+      moveX.value[rowIndex][colIndex] = countMove(frontWithoutEmpty, originNum, colCount - 1 - colIndex, 1);
     }
   }
 
-  movement();
+  movementX();
 }
 
 function left() {
@@ -101,24 +121,13 @@ function left() {
 
       if (!originNum) continue;
 
-      let move = 0;
       const frontWithoutEmpty = gameBoard.value[rowIndex].filter((num, index) => !!num && index < colIndex);
 
-      move -= colIndex - frontWithoutEmpty.length;
-      frontWithoutEmpty.forEach((num, index, arr) => {
-        if ((index + 1) % 2) {
-          if (num === arr[index + 1]) move -= 1;
-          else if (index === arr.length - 1 && num === originNum) move -= 1;
-        } else {
-          if (index === arr.length - 1 && num === originNum && num !== arr[index - 1]) move -= 1;
-        }
-      });
-
-      moveX.value[rowIndex][colIndex] = move;
+      moveX.value[rowIndex][colIndex] = countMove(frontWithoutEmpty, originNum, colIndex, -1);
     }
   }
 
-  movement();
+  movementX();
 }
 
 function top() {
@@ -128,26 +137,15 @@ function top() {
 
       if (!originNum) continue;
 
-      let move = 0;
       const frontWithoutEmpty = gameBoard.value
         .map((row) => row[colIndex])
         .filter((num, index) => !!num && index < rowIndex);
 
-      move -= rowIndex - frontWithoutEmpty.length;
-      frontWithoutEmpty.forEach((num, index, arr) => {
-        if ((index + 1) % 2) {
-          if (num === arr[index + 1]) move -= 1;
-          else if (index === arr.length - 1 && num === originNum) move -= 1;
-        } else {
-          if (index === arr.length - 1 && num === originNum && num !== arr[index - 1]) move -= 1;
-        }
-      });
-
-      moveY.value[rowIndex][colIndex] = move;
+      moveY.value[rowIndex][colIndex] = countMove(frontWithoutEmpty, originNum, rowIndex, -1);
     }
   }
 
-  movement();
+  movementY();
 }
 
 function bottom() {
@@ -157,27 +155,16 @@ function bottom() {
 
       if (!originNum) continue;
 
-      let move = 0;
       const frontWithoutEmpty = gameBoard.value
         .map((row) => row[colIndex])
         .filter((num, index) => !!num && index > rowIndex);
       frontWithoutEmpty.reverse();
 
-      move += rowCount - 1 - rowIndex - frontWithoutEmpty.length;
-      frontWithoutEmpty.forEach((num, index, arr) => {
-        if ((index + 1) % 2) {
-          if (num === arr[index + 1]) move += 1;
-          else if (index === arr.length - 1 && num === originNum) move += 1;
-        } else {
-          if (index === arr.length - 1 && num === originNum && num !== arr[index - 1]) move += 1;
-        }
-      });
-
-      moveY.value[rowIndex][colIndex] = move;
+      moveY.value[rowIndex][colIndex] = countMove(frontWithoutEmpty, originNum, rowCount - 1 - rowIndex, 1);
     }
   }
 
-  movement();
+  movementY();
 }
 
 function keydownHandler(e) {
@@ -192,10 +179,7 @@ function keydownHandler(e) {
   }
 }
 
-onMounted(() => {
-  gameStart();
-  window.addEventListener("keydown", keydownHandler);
-});
+let completeElementCount = 0;
 
 function enterTransition(el, done) {
   const row = el.dataset.row;
@@ -204,13 +188,12 @@ function enterTransition(el, done) {
 
   const animation = el
     .querySelector(".box")
-    .animate([{ transform: "scale(1.1)" }, { transform: "scale(0.9)" }, { transform: "scale(1)" }], { duration: 150 });
+    .animate([{ transform: "scale(1.1)" }, { transform: "scale(0.9)" }, { transform: "scale(1)" }], { duration: 120 });
   animation.onfinish = () => {
     done();
+    merge.value[row][col] = 0;
   };
 }
-
-let completeElementCount = 0;
 
 function leaveTransition(el, done) {
   const row = el.dataset.row;
@@ -220,14 +203,13 @@ function leaveTransition(el, done) {
   const offsetY = moveY.value[row][col] * 112 + "px";
 
   const animation = el.querySelector(".box").animate([{}, { transform: `translate(${offsetX},${offsetY})` }], {
-    duration: 100,
+    duration: 120,
     easing: "ease-in",
   });
   animation.onfinish = () => {
     done();
     completeElementCount += 1;
     if (completeElementCount === rowCount * colCount) {
-      console.log(1);
       completeElementCount = 0;
       setGameBoardToNewResult();
       randomTwoFillIn(1);
@@ -250,6 +232,15 @@ function randomTwoFillIn(times) {
     }
   }
 }
+
+function gameStart() {
+  randomTwoFillIn(2);
+}
+
+onMounted(() => {
+  gameStart();
+  window.addEventListener("keydown", keydownHandler);
+});
 </script>
 
 <template>
@@ -333,7 +324,6 @@ $gutter: 12px;
 
     &.box-32 {
       background-color: #f67c5f;
-      transform: scale();
     }
 
     &.box-64 {
@@ -348,15 +338,5 @@ $gutter: 12px;
       background-color: #edcc61;
     }
   }
-}
-
-.list-enter-active,
-.list-leave-active {
-  transition: all 0.5s ease;
-}
-.list-enter-from,
-.list-leave-to {
-  opacity: 0;
-  transform: translateX(30px);
 }
 </style>
