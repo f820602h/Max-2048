@@ -74,28 +74,21 @@ function movementY() {
       .map((i) => Array(0));
   } else {
     setGameBoardToNewResult();
+    isRunning.value = false;
   }
 }
 
-function countMove(frontWithoutEmptyArray, originNum, defaultMove, direction = 1) {
+function countMove(frontWithoutEmptyArray, defaultMove, direction = 1) {
   let move = 0;
   move += direction * (defaultMove - frontWithoutEmptyArray.length);
   frontWithoutEmptyArray.forEach((num, index, arr) => {
-    const isOdd = (index + 1) % 2 !== 0;
-    const isEven = (index + 1) % 2 === 0;
-    const isLastOne = index === arr.length - 1;
-
-    const sameWithAfter = num === arr[index + 1];
-    const sameWithBefore = num === arr[index - 1];
-    const sameWithOrigin = num === originNum;
-
-    if (isOdd && !isLastOne) {
-      if (sameWithAfter) move += direction;
-    } else if (isEven && !isLastOne) {
-      if (!sameWithBefore && sameWithAfter) move += direction;
-    } else if (isLastOne) {
-      if (!sameWithBefore && sameWithOrigin) move += direction;
+    let checkIndex = 1;
+    let sameNumCount = 0;
+    while (arr[index - checkIndex] === num) {
+      checkIndex++;
+      sameNumCount++;
     }
+    if (sameNumCount % 2 !== 0) move += direction;
   });
   return move;
 }
