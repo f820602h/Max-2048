@@ -3,7 +3,9 @@ import { ref, onMounted } from "vue";
 
 const rowCount = 4;
 const colCount = 4;
+const animationDuration = 100;
 
+const isRunning = ref(false);
 const score = ref(0);
 
 const gameBoard = ref(rowColValue());
@@ -48,6 +50,7 @@ function movementX() {
       .map((i) => Array(0));
   } else {
     setGameBoardToNewResult();
+    isRunning.value = false;
   }
 }
 
@@ -168,10 +171,10 @@ function enterTransition(el, done) {
 
   if (merge.value[row][col] && box) {
     animation = box.animate([{ transform: "scale(1.1)" }, { transform: "scale(0.9)" }, { transform: "scale(1)" }], {
-      duration: 150,
+      duration: animationDuration,
     });
   } else {
-    animation = el.animate([], { duration: 150 });
+    animation = el.animate([], { duration: animationDuration });
   }
 
   animation.onfinish = () => {
@@ -196,11 +199,11 @@ function leaveTransition(el, done) {
 
   if (box) {
     animation = box.animate([{}, { transform: `translate(${offsetX},${offsetY})` }], {
-      duration: 150,
+      duration: animationDuration,
       easing: "ease-in",
     });
   } else {
-    animation = el.animate([], { duration: 150, easing: "ease-in" });
+    animation = el.animate([], { duration: animationDuration, easing: "ease-in" });
   }
 
   animation.onfinish = () => {
@@ -227,9 +230,12 @@ function randomTwoFillIn(times) {
       time += 1;
     }
   }
+
+  isRunning.value = false;
 }
 
 function keydownHandler(e) {
+  if (isRunning.value) return;
   if (e.code === "ArrowLeft") {
     left();
   } else if (e.code === "ArrowRight") {
@@ -252,7 +258,7 @@ onMounted(() => {
 </script>
 
 <template>
-  score: {{ score }}
+  <h2>Score: {{ score }}</h2>
   <div class="board">
     <div v-for="(row, row_index) in gameBoard" :key="row_index" class="row">
       <TransitionGroup @enter="enterTransition" @leave="leaveTransition">
@@ -284,6 +290,10 @@ onMounted(() => {
 <style scoped lang="scss">
 $boxRadius: 100px;
 $gutter: 12px;
+
+h2 {
+  text-align: left;
+}
 .board {
   background: #b9ada1;
   border-radius: 8px;
