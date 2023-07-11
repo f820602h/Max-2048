@@ -70,6 +70,11 @@ function movementY() {
       newResult.value[r_index + move][c_index] += originNum;
     });
   });
+function gameStart() {
+  gameBoard.value = initRowColValue(0);
+  randomTwoFillIn(2);
+  resetStep();
+}
 
   if (isMoved) {
     gameBoard.value = Array(rowCount)
@@ -247,39 +252,23 @@ function keydownHandler(e) {
   }
 }
 
-function gameStart() {
-  randomTwoFillIn(2);
-}
-
 onMounted(() => {
-  gameStart();
   window.addEventListener("keydown", keydownHandler);
+  gameStart();
 });
 </script>
 
 <template>
-  <h2>Score: {{ score }}</h2>
+  <div class="controller">
+    <h2>Score: {{ score }}</h2>
+    <button @click="gameStart">New Game</button>
+  </div>
   <div class="board">
     <div v-for="(row, row_index) in gameBoard" :key="row_index" class="row">
       <TransitionGroup @enter="enterTransition" @leave="leaveTransition">
         <div v-for="(col, col_index) in row" :key="col_index" class="col" :data-row="row_index" :data-col="col_index">
-          <Transition name="pop">
-            <div
-              v-if="col"
-              class="box"
-              :class="{
-                'box-2': col === 2,
-                'box-4': col === 4,
-                'box-8': col === 8,
-                'box-16': col === 16,
-                'box-32': col === 32,
-                'box-64': col === 64,
-                'box-128': col === 128,
-                'box-256': col >= 256,
-              }"
-            >
-              {{ col }}
-            </div>
+          <Transition name="pop" @after-enter="gameOver">
+            <div v-if="col" class="box" :class="`box-${col}`">{{ col }}</div>
           </Transition>
         </div>
       </TransitionGroup>
@@ -291,9 +280,12 @@ onMounted(() => {
 $boxRadius: 100px;
 $gutter: 12px;
 
-h2 {
-  text-align: left;
+.controller {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
+
 .board {
   background: #b9ada1;
   border-radius: 8px;
@@ -321,43 +313,35 @@ h2 {
     height: $boxRadius;
     border-radius: 8px;
     line-height: $boxRadius;
-    font-size: 42px;
+    font-size: 36px;
     font-weight: bold;
     text-align: center;
-    color: white;
+    color: f9f6f2;
     transition: 0.3s;
-    &.box-2 {
-      background-color: #eee4da;
-      color: #756e66;
+
+    $boxBg: (
+      2: #eee4da,
+      4: #ede0c8,
+      8: #f2b179,
+      16: #f59563,
+      32: #f67c5f,
+      64: #f65e3b,
+      128: #edcf72,
+      256: #edcc61,
+      512: #edc850,
+      1024: #edc53f,
+      2048: #edc22e,
+    );
+
+    @each $key, $value in $boxBg {
+      &.box-#{$key} {
+        background-color: $value;
+      }
     }
 
+    &.box-2,
     &.box-4 {
-      background-color: #ede0c8;
       color: #756e66;
-    }
-
-    &.box-8 {
-      background-color: #f2b179;
-    }
-
-    &.box-16 {
-      background-color: #f59563;
-    }
-
-    &.box-32 {
-      background-color: #f67c5f;
-    }
-
-    &.box-64 {
-      background-color: #f65e3b;
-    }
-
-    &.box-128 {
-      background-color: #edcf72;
-    }
-
-    &.box-256 {
-      background-color: #edcc61;
     }
   }
 }
