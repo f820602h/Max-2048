@@ -94,12 +94,13 @@ function countMove(frontWithoutEmptyArray, defaultMove, direction = 1) {
 }
 
 function right() {
+  isRunning.value = true;
   gameBoard.value.forEach((row, rowIndex) => {
     row.forEach((col, colIndex, cols) => {
       if (!col) return;
-      const frontWithoutEmpty = cols.filter((num, index) => !!num && index > colIndex);
+      const frontWithoutEmpty = cols.filter((num, index) => !!num && index >= colIndex);
       frontWithoutEmpty.reverse();
-      moveX.value[rowIndex][colIndex] = countMove(frontWithoutEmpty, col, colCount - 1 - colIndex, 1);
+      moveX.value[rowIndex][colIndex] = countMove(frontWithoutEmpty, colCount - colIndex, 1);
     });
   });
 
@@ -107,11 +108,12 @@ function right() {
 }
 
 function left() {
+  isRunning.value = true;
   gameBoard.value.forEach((row, rowIndex) => {
     row.forEach((col, colIndex, cols) => {
       if (!col) return;
-      const frontWithoutEmpty = cols.filter((num, index) => !!num && index < colIndex);
-      moveX.value[rowIndex][colIndex] = countMove(frontWithoutEmpty, col, colIndex, -1);
+      const frontWithoutEmpty = cols.filter((num, index) => !!num && index <= colIndex);
+      moveX.value[rowIndex][colIndex] = countMove(frontWithoutEmpty, colIndex + 1, -1);
     });
   });
 
@@ -119,38 +121,38 @@ function left() {
 }
 
 function top() {
-  for (let colIndex = 0; colIndex < colCount; colIndex++) {
-    for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
-      const originNum = gameBoard.value[rowIndex][colIndex];
+  isRunning.value = true;
 
-      if (!originNum) continue;
-
-      const frontWithoutEmpty = gameBoard.value
-        .map((row) => row[colIndex])
-        .filter((num, index) => !!num && index < rowIndex);
-
-      moveY.value[rowIndex][colIndex] = countMove(frontWithoutEmpty, originNum, rowIndex, -1);
-    }
-  }
+  gameBoard.value
+    .map((row, rowIndex, rows) => {
+      return rows.map((r) => r[rowIndex]);
+    })
+    .forEach((row, rowIndex) => {
+      row.forEach((col, colIndex, cols) => {
+        if (!col) return;
+        const frontWithoutEmpty = cols.filter((num, index) => !!num && index <= colIndex);
+        moveY.value[colIndex][rowIndex] = countMove(frontWithoutEmpty, colIndex + 1, -1);
+      });
+    });
 
   movementY();
 }
 
 function bottom() {
-  for (let colIndex = 0; colIndex < colCount; colIndex++) {
-    for (let rowIndex = rowCount - 1; rowIndex >= 0; rowIndex--) {
-      const originNum = gameBoard.value[rowIndex][colIndex];
+  isRunning.value = true;
 
-      if (!originNum) continue;
-
-      const frontWithoutEmpty = gameBoard.value
-        .map((row) => row[colIndex])
-        .filter((num, index) => !!num && index > rowIndex);
-      frontWithoutEmpty.reverse();
-
-      moveY.value[rowIndex][colIndex] = countMove(frontWithoutEmpty, originNum, rowCount - 1 - rowIndex, 1);
-    }
-  }
+  gameBoard.value
+    .map((row, rowIndex, rows) => {
+      return rows.map((r) => r[rowIndex]);
+    })
+    .forEach((row, rowIndex) => {
+      row.forEach((col, colIndex, cols) => {
+        if (!col) return;
+        const frontWithoutEmpty = cols.filter((num, index) => !!num && index >= colIndex);
+        frontWithoutEmpty.reverse();
+        moveY.value[colIndex][rowIndex] = countMove(frontWithoutEmpty, colCount - colIndex, 1);
+      });
+    });
 
   movementY();
 }
