@@ -1,95 +1,94 @@
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, computed, watch, onMounted } from "vue";
 
 const rowCount = 4;
 const colCount = 4;
 const animationDuration = 100;
 
-const isRunning = ref(false);
+const isRunning = ref(true);
 const score = ref(0);
 
-const gameBoard = ref(rowColValue());
-const moveX = ref(rowColValue());
-const moveY = ref(rowColValue());
-const merge = ref(rowColValue());
-const newResult = ref(rowColValue());
+const gameBoard = ref(initRowColValue(0));
+const move = ref(initRowColValue({ x: 0, y: 0 }));
+const merge = ref(initRowColValue(0));
+const newResult = ref(initRowColValue(0));
 
-function rowColValue() {
-  return Array(rowCount)
+function createSameValueArray(length, value) {
+  return Array(length)
     .fill(null)
-    .map((i) => Array(colCount).fill(0));
+    .map((i) => JSON.parse(JSON.stringify(value)));
 }
 
-function setGameBoardToNewResult() {
-  gameBoard.value = newResult.value;
-  moveX.value = rowColValue();
-  moveY.value = rowColValue();
-  newResult.value = rowColValue();
+function initRowColValue(value) {
+  return createSameValueArray(rowCount, createSameValueArray(colCount, value));
 }
 
-function movementX() {
-  let isMoved = false;
+function resetStep() {
+  merge.value = initRowColValue(0);
+  move.value = initRowColValue({ x: 0, y: 0 });
+  newResult.value = initRowColValue(0);
+  isRunning.value = false;
+}
 
-  moveX.value.forEach((row, r_index) => {
-    row.forEach((move, c_index) => {
-      const originNum = gameBoard.value[r_index][c_index];
-      if (move !== 0) {
-        isMoved = true;
-      }
-      if (newResult.value[r_index][c_index + move] === originNum && originNum !== 0) {
-        merge.value[r_index][c_index + move] = 1;
-        score.value += originNum * 2;
-      }
-      newResult.value[r_index][c_index + move] += originNum;
-    });
-  });
+const isBoardFull = computed(() => {
+  return gameBoard.value.every((row) => row.length === colCount && row.every((col) => !!col));
+});
 
-  if (isMoved) {
-    gameBoard.value = Array(rowCount)
-      .fill(null)
-      .map((i) => Array(0));
-  } else {
-    setGameBoardToNewResult();
-    isRunning.value = false;
+const isWin = computed(() => {
+  return gameBoard.value.some((row) => row.some((col) => col === 2048));
+});
+
+const isLose = computed(() => {
+  return (
+    isBoardFull.value &&
+    !isWin.value &&
+    !gameBoard.value.some((row, rowIndex) =>
+      row.some((col, colIndex) => {
+        const nextRow = gameBoard.value[rowIndex + 1];
+        const nextCol = gameBoard.value[rowIndex][colIndex + 1];
+        return (nextRow && col === nextRow[colIndex]) || col === nextCol;
+      })
+    )
+  );
+});
+
+function randomTwoFillIn(times) {
+  function randomBetween(min, max) {
+    return Math.floor(Math.random() * (max - min + 1) + min);
+  }
+
+  let time = 0;
+  while (time < times) {
+    if (isBoardFull.value) return;
+    const randomRow = randomBetween(0, rowCount - 1);
+    const randomCol = randomBetween(0, colCount - 1);
+    if (!gameBoard.value[randomRow][randomCol]) {
+      gameBoard.value[randomRow][randomCol] = 2;
+      time += 1;
+    }
   }
 }
 
-function movementY() {
-  let isMoved = false;
-
-  moveY.value.forEach((row, r_index) => {
-    row.forEach((move, c_index) => {
-      const originNum = gameBoard.value[r_index][c_index];
-      if (move !== 0) {
-        isMoved = true;
-      }
-      if (newResult.value[r_index + move][c_index] === originNum && originNum !== 0) {
-        merge.value[r_index + move][c_index] = 1;
-        score.value += originNum * 2;
-      }
-      newResult.value[r_index + move][c_index] += originNum;
-    });
-  });
 function gameStart() {
   gameBoard.value = initRowColValue(0);
   randomTwoFillIn(2);
   resetStep();
 }
 
-  if (isMoved) {
-    gameBoard.value = Array(rowCount)
-      .fill(null)
-      .map((i) => Array(0));
-  } else {
-    setGameBoardToNewResult();
-    isRunning.value = false;
+function gameOver() {
+  if (isWin.value) {
+    alert("You Win!");
+  } else if (isLose.value) {
+    alert("You Lose!");
   }
 }
 
-function countMove(frontWithoutEmptyArray, defaultMove, direction = 1) {
+function countMove(array, direction = 1) {
+  const withoutEmptyArray = array.filter((num, index) => !!num);
+
   let move = 0;
-  move += direction * (defaultMove - frontWithoutEmptyArray.length);
-  frontWithoutEmptyArray.forEach((num, index, arr) => {
+  move += direction * (array.length - withoutEmptyArray.length);
+  withoutEmptyArray.forEach((num, index, arr) => {
     let checkIndex = 1;
     let sameNumCount = 0;
     while (arr[index - checkIndex] === num) {
@@ -98,39 +97,29 @@ function countMove(frontWithoutEmptyArray, defaultMove, direction = 1) {
     }
     if (sameNumCount % 2 !== 0) move += direction;
   });
+
   return move;
 }
 
-function right() {
-  isRunning.value = true;
-  gameBoard.value.forEach((row, rowIndex) => {
-    row.forEach((col, colIndex, cols) => {
-      if (!col) return;
-      const frontWithoutEmpty = cols.filter((num, index) => !!num && index >= colIndex);
-      frontWithoutEmpty.reverse();
-      moveX.value[rowIndex][colIndex] = countMove(frontWithoutEmpty, colCount - colIndex, 1);
-    });
-  });
-
-  movementX();
-}
-
 function left() {
-  isRunning.value = true;
   gameBoard.value.forEach((row, rowIndex) => {
     row.forEach((col, colIndex, cols) => {
       if (!col) return;
-      const frontWithoutEmpty = cols.filter((num, index) => !!num && index <= colIndex);
-      moveX.value[rowIndex][colIndex] = countMove(frontWithoutEmpty, colIndex + 1, -1);
+      const sliceCol = cols.filter((num, index) => index <= colIndex);
+      move.value[rowIndex][colIndex].x = countMove(sliceCol, -1);
     });
   });
-
-  movementX();
 }
-
+function right() {
+  gameBoard.value.forEach((row, rowIndex) => {
+    row.forEach((col, colIndex, cols) => {
+      if (!col) return;
+      const sliceCol = cols.filter((num, index) => index >= colIndex).toReversed();
+      move.value[rowIndex][colIndex].x = countMove(sliceCol);
+    });
+  });
+}
 function top() {
-  isRunning.value = true;
-
   gameBoard.value
     .map((row, rowIndex, rows) => {
       return rows.map((r) => r[rowIndex]);
@@ -138,39 +127,72 @@ function top() {
     .forEach((row, rowIndex) => {
       row.forEach((col, colIndex, cols) => {
         if (!col) return;
-        const frontWithoutEmpty = cols.filter((num, index) => !!num && index <= colIndex);
-        moveY.value[colIndex][rowIndex] = countMove(frontWithoutEmpty, colIndex + 1, -1);
+        const sliceCol = cols.filter((num, index) => index <= colIndex);
+        move.value[colIndex][rowIndex].y = countMove(sliceCol, -1);
       });
     });
-
-  movementY();
+}
+function bottom() {
+  gameBoard.value
+    .map((row, rowIndex, rows) => {
+      return rows.map((r) => r[rowIndex]);
+    })
+    .forEach((row, rowIndex) => {
+      row.forEach((col, colIndex, cols) => {
+        if (!col) return;
+        const sliceCol = cols.filter((num, index) => index >= colIndex).toReversed();
+        move.value[colIndex][rowIndex].y = countMove(sliceCol);
+      });
+    });
 }
 
-function bottom() {
+function calcNewResult() {
+  move.value.forEach((row, r_index) => {
+    row.forEach((move, c_index) => {
+      const originNum = gameBoard.value[r_index][c_index];
+      if (newResult.value[r_index + move.y][c_index + move.x] === originNum && originNum !== 0) {
+        merge.value[r_index + move.y][c_index + move.x] = 1;
+        score.value += originNum * 2;
+      }
+      newResult.value[r_index + move.y][c_index + move.x] += originNum;
+    });
+  });
+}
+
+function keydownHandler(e) {
+  if (isRunning.value) return;
   isRunning.value = true;
 
-  gameBoard.value
-    .map((row, rowIndex, rows) => {
-      return rows.map((r) => r[rowIndex]);
-    })
-    .forEach((row, rowIndex) => {
-      row.forEach((col, colIndex, cols) => {
-        if (!col) return;
-        const frontWithoutEmpty = cols.filter((num, index) => !!num && index >= colIndex);
-        frontWithoutEmpty.reverse();
-        moveY.value[colIndex][rowIndex] = countMove(frontWithoutEmpty, colCount - colIndex, 1);
-      });
-    });
+  switch (e.code) {
+    case "ArrowLeft":
+      left();
+      break;
+    case "ArrowRight":
+      right();
+      break;
+    case "ArrowUp":
+      top();
+      break;
+    case "ArrowDown":
+      bottom();
+      break;
+    default:
+      break;
+  }
 
-  movementY();
+  calcNewResult();
+  gameBoard.value = createSameValueArray(rowCount, []);
 }
 
 let completeElementCount = 0;
+let movement = 0;
 
 function enterTransition(el, done) {
   const row = el.dataset.row;
   const col = el.dataset.col;
   const box = el.querySelector(".box");
+  const { x, y } = move.value[row][col];
+  movement += x + y;
 
   let animation;
 
@@ -184,11 +206,12 @@ function enterTransition(el, done) {
 
   animation.onfinish = () => {
     done();
-    merge.value[row][col] = 0;
     completeElementCount += 1;
     if (completeElementCount === rowCount * colCount) {
+      if (movement) randomTwoFillIn(1);
+      resetStep();
+      movement = 0;
       completeElementCount = 0;
-      randomTwoFillIn(1);
     }
   };
 }
@@ -197,59 +220,26 @@ function leaveTransition(el, done) {
   const row = el.dataset.row;
   const col = el.dataset.col;
   const box = el.querySelector(".box");
+  const { x, y } = move.value[row][col];
 
-  const offsetX = moveX.value[row][col] * 112 + "px";
-  const offsetY = moveY.value[row][col] * 112 + "px";
   let animation;
 
   if (box) {
-    animation = box.animate([{}, { transform: `translate(${offsetX},${offsetY})` }], {
+    animation = box.animate([{ transform: `translate(${x * 112 + "px"},${y * 112 + "px"})` }], {
       duration: animationDuration,
-      easing: "ease-in",
     });
   } else {
-    animation = el.animate([], { duration: animationDuration, easing: "ease-in" });
+    animation = el.animate([], { duration: animationDuration });
   }
 
   animation.onfinish = () => {
     done();
     completeElementCount += 1;
     if (completeElementCount === rowCount * colCount) {
+      gameBoard.value = newResult.value;
       completeElementCount = 0;
-      setGameBoardToNewResult();
     }
   };
-}
-
-function randomBetween(min, max) {
-  return Math.floor(Math.random() * (max - min + 1) + min);
-}
-
-function randomTwoFillIn(times) {
-  let time = 0;
-  while (time < times) {
-    const randomRow = randomBetween(0, rowCount - 1);
-    const randomCol = randomBetween(0, colCount - 1);
-    if (!gameBoard.value[randomRow][randomCol]) {
-      gameBoard.value[randomRow][randomCol] = 2;
-      time += 1;
-    }
-  }
-
-  isRunning.value = false;
-}
-
-function keydownHandler(e) {
-  if (isRunning.value) return;
-  if (e.code === "ArrowLeft") {
-    left();
-  } else if (e.code === "ArrowRight") {
-    right();
-  } else if (e.code === "ArrowUp") {
-    top();
-  } else if (e.code === "ArrowDown") {
-    bottom();
-  }
 }
 
 onMounted(() => {
