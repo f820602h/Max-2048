@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, onMounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 
 const rowCount = 4;
 const colCount = 4;
@@ -46,7 +46,7 @@ const isLose = computed(() => {
       row.some((col, colIndex) => {
         const nextRow = gameBoard.value[rowIndex + 1];
         const nextCol = gameBoard.value[rowIndex][colIndex + 1];
-        return (nextRow && col === nextRow[colIndex]) || col === nextCol;
+        return (nextRow && col === nextRow[colIndex]) || (nextCol && col === nextCol);
       })
     )
   );
